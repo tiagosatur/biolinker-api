@@ -11,7 +11,7 @@ import {
   LogoutResponse,
   AuthUser,
   AuthTokens
-} from './auth.model';
+} from './auth.types';
 
 export class AuthService {
   constructor(private userRepository: UserRepository) {}

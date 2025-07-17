@@ -6,7 +6,7 @@ import {
   LoginRequest, 
   RefreshTokenRequest, 
   LogoutRequest 
-} from './auth.model';
+} from './auth.types';
 
 export class AuthController {
   constructor(private authService: AuthService) {}
