@@ -2,12 +2,15 @@ import Fastify from 'fastify';
 import cors from '@fastify/cors';
 import { userRoutes } from './users/user.routes';
 import { linkRoutes } from './links/link.routes';
+import { authRoutes } from './auth/auth.routes';
 import { UserController } from './users/user.controller';
 import { UserService } from './users/user.service';
 import { UserRepository } from './users/user.repository';
 import { LinkController } from './links/link.controller';
 import { LinkService } from './links/link.service';
 import { LinkRepository } from './links/link.repository';
+import { AuthController } from './auth/auth.controller';
+import { AuthService } from './auth/auth.service';
 
 export async function buildApp() {
   const fastify = Fastify({
@@ -28,7 +31,15 @@ export async function buildApp() {
   const linkService = new LinkService(linkRepository);
   const linkController = new LinkController(linkService);
 
+  // Initialize auth dependencies
+  const authService = new AuthService(userRepository);
+  const authController = new AuthController(authService);
+
   // Register routes
+  await fastify.register(async (fastify) => {
+    await authRoutes(fastify, authController);
+  }, { prefix: '/api' });
+
   await fastify.register(async (fastify) => {
     await userRoutes(fastify, userController);
   }, { prefix: '/api' });

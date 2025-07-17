@@ -20,6 +20,10 @@ export const firebaseConfig = {
   authDomain: process.env.FIREBASE_AUTH_DOMAIN,
   storageBucket: process.env.FIREBASE_STORAGE_BUCKET,
   
+  // Firebase Auth REST API URLs
+  authBaseUrl: process.env.FIREBASE_AUTH_BASE_URL || 'https://identitytoolkit.googleapis.com/v1',
+  secureTokenUrl: process.env.FIREBASE_SECURE_TOKEN_URL || 'https://securetoken.googleapis.com/v1',
+  
   // Optional Client SDK Configuration
   MESSAGING_SENDER_ID: process.env.FIREBASE_MESSAGING_SENDER_ID,
   APP_ID: process.env.FIREBASE_APP_ID,
