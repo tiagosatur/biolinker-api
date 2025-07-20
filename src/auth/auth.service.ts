@@ -9,8 +9,7 @@ import {
   AuthResponse, 
   RefreshTokenResponse, 
   LogoutResponse,
-  AuthUser,
-  AuthTokens
+  AuthUser
 } from './auth.types';
 
 export class AuthService {
@@ -28,16 +27,19 @@ export class AuthService {
       email: registerData.email,
       password: registerData.password,
       displayName: registerData.displayName || registerData.username,
-      photoURL: registerData.picture,
+      photoURL: registerData.avatarUrl,
     });
 
     try {
-      // Create Firestore user document
-      const user = await this.userRepository.create({
+      // Initialize user profile
+      await this.userRepository.initializeProfile({
         uid: userRecord.uid,
         username: registerData.username,
+        displayName: registerData.displayName || registerData.username,
         bio: registerData.bio,
-        picture: registerData.picture,
+        avatarUrl: registerData.avatarUrl,
+        theme: registerData.theme || 'light',
+        isPublic: registerData.isPublic ?? true
       });
 
       // Immediately sign in with Firebase Auth REST API to get real tokens
@@ -48,20 +50,15 @@ export class AuthService {
 
       // Convert to auth response format
       const authUser: AuthUser = {
-        uid: user.uid,
+        id: userRecord.uid,
         email: registerData.email,
-        username: user.username,
-        bio: user.bio,
-        picture: user.picture,
-        createdAt: user.createdAt.toDate().toISOString(),
-        updatedAt: user.updatedAt.toDate().toISOString()
+        username: registerData.username,
+        displayName: registerData.displayName || registerData.username
       };
-
-      const tokens: AuthTokens = FirebaseAuthClient.formatAuthTokens(authData);
 
       return {
         user: authUser,
-        tokens
+        tokens: FirebaseAuthClient.formatAuthTokens(authData)
       };
 
     } catch (error) {
@@ -82,26 +79,21 @@ export class AuthService {
       const uid = authData.localId;
       
       // Get user profile from Firestore
-      const userProfile = await this.userRepository.getByUid(uid);
+      const userProfile = await this.userRepository.getUserProfile(uid);
       if (!userProfile) {
         throw new Error('User profile not found');
       }
 
       const authUser: AuthUser = {
-        uid: userProfile.uid,
+        id: userProfile.uid,
         email: authData.email || loginData.email,
         username: userProfile.username,
-        bio: userProfile.bio,
-        picture: userProfile.picture,
-        createdAt: userProfile.createdAt.toDate().toISOString(),
-        updatedAt: userProfile.updatedAt.toDate().toISOString()
+        displayName: userProfile.displayName
       };
-
-      const tokens: AuthTokens = FirebaseAuthClient.formatAuthTokens(authData);
 
       return {
         user: authUser,
-        tokens
+        tokens: FirebaseAuthClient.formatAuthTokens(authData)
       };
 
     } catch (error) {
@@ -118,9 +110,7 @@ export class AuthService {
   async refreshToken(refreshData: RefreshTokenRequest): Promise<RefreshTokenResponse> {
     try {
       const refreshAuthData = await FirebaseAuthClient.refreshIdToken(refreshData.refreshToken);
-
       return FirebaseAuthClient.formatRefreshTokens(refreshAuthData);
-
     } catch (error) {
       throw new Error('Invalid refresh token');
     }
@@ -130,7 +120,6 @@ export class AuthService {
     // Note: Firebase doesn't have server-side token invalidation
     // The client should discard the tokens
     // In a production app, you might want to maintain a blacklist of tokens
-    
     return {
       message: 'Successfully logged out'
     };
@@ -139,20 +128,17 @@ export class AuthService {
   async getCurrentUser(uid: string): Promise<AuthUser | null> {
     try {
       const userRecord = await adminAuth.getUser(uid);
-      const userProfile = await this.userRepository.getByUid(uid);
+      const userProfile = await this.userRepository.getUserProfile(uid);
       
       if (!userProfile) {
         return null;
       }
 
       return {
-        uid: userProfile.uid,
+        id: userProfile.uid,
         email: userRecord.email || '',
         username: userProfile.username,
-        bio: userProfile.bio,
-        picture: userProfile.picture,
-        createdAt: userProfile.createdAt.toDate().toISOString(),
-        updatedAt: userProfile.updatedAt.toDate().toISOString()
+        displayName: userProfile.displayName
       };
 
     } catch (error) {

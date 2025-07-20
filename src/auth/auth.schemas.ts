@@ -8,22 +8,22 @@ const errorResponse = {
   }
 };
 
+// Basic auth user response (minimal)
+const authUserResponse = {
+  type: 'object',
+  properties: {
+    id: { type: 'string' },
+    email: { type: 'string', format: 'email' },
+    username: { type: 'string' },
+    displayName: { type: 'string' }
+  }
+};
+
 // Auth token response schema
 const authTokenResponse = {
   type: 'object',
   properties: {
-    user: {
-      type: 'object',
-      properties: {
-        uid: { type: 'string' },
-        email: { type: 'string', format: 'email' },
-        username: { type: 'string' },
-        bio: { type: 'string', nullable: true },
-        picture: { type: 'string', format: 'uri', nullable: true },
-        createdAt: { type: 'string', format: 'date-time' },
-        updatedAt: { type: 'string', format: 'date-time' }
-      }
-    },
+    user: authUserResponse,
     tokens: {
       type: 'object',
       properties: {
@@ -67,10 +67,17 @@ export const authSchemas = {
           maxLength: 500,
           nullable: true
         },
-        picture: { 
+        avatarUrl: { 
           type: 'string', 
           format: 'uri',
           nullable: true
+        },
+        theme: {
+          type: 'string',
+          enum: ['light', 'dark']
+        },
+        isPublic: {
+          type: 'boolean'
         }
       }
     },
@@ -148,6 +155,14 @@ export const authSchemas = {
           message: { type: 'string' }
         }
       },
+      401: errorResponse
+    }
+  },
+
+  // GET /auth/me - Get current auth user
+  getCurrentUser: {
+    response: {
+      200: authUserResponse,
       401: errorResponse
     }
   }

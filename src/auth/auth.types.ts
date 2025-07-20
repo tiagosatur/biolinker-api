@@ -4,7 +4,9 @@ export interface RegisterRequest {
   username: string;
   displayName?: string;
   bio?: string;
-  picture?: string;
+  avatarUrl?: string;
+  theme?: 'light' | 'dark';
+  isPublic?: boolean;
 }
 
 export interface LoginRequest {
@@ -27,13 +29,10 @@ export interface AuthTokens {
 }
 
 export interface AuthUser {
-  uid: string;
+  id: string;
   email: string;
   username: string;
-  bio?: string;
-  picture?: string;
-  createdAt: string;
-  updatedAt: string;
+  displayName: string;
 }
 
 export interface AuthResponse {
