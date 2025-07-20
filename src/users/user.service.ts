@@ -1,48 +1,97 @@
-import { adminAuth } from '../shared/utils/firebase';
-import { CreateUser, User, UserResponse } from './user.model';
 import { UserRepository } from './user.repository';
+import { 
+  UpdateProfileInputParams, 
+  UserProfileResponse, 
+  PublicProfileResponse,
+  PaginatedResponse,
+  UserListItem,
+  GetAllUsersQuery 
+} from './user.types';
 
 export class UserService {
   constructor(private userRepository: UserRepository) {}
 
-  async register(userData: CreateUser): Promise<UserResponse> {
-    // Validate username availability
-    const isAvailable = await this.userRepository.isUsernameAvailable(userData.username);
-    if (!isAvailable) {
-      throw new Error('Username is already taken');
-    }
+  async getUserProfile(uid: string): Promise<UserProfileResponse | null> {
+    const profile = await this.userRepository.getUserProfile(uid);
+    if (!profile) return null;
 
-    // Create Firebase Auth user
-    const userRecord = await adminAuth.createUser({
-      email: userData.email,
-      password: userData.password,
-      displayName: userData.username,
-      photoURL: userData.picture,
-    });
-
-    // Create Firestore user document
-    const user = await this.userRepository.create({
-      uid: userRecord.uid,
-      username: userData.username,
-      bio: userData.bio,
-      picture: userData.picture,
-    });
-
-    // Generate ID token for initial authentication
-    const token = await adminAuth.createCustomToken(userRecord.uid);
-
-    return this.toUserResponse(user, token);
+    return {
+      id: profile.uid,
+      username: profile.username,
+      displayName: profile.displayName,
+      bio: profile.bio || null,
+      avatarUrl: profile.avatarUrl || null,
+      theme: profile.theme,
+      isPublic: profile.isPublic,
+      createdAt: profile.createdAt.toDate().toISOString(),
+      updatedAt: profile.updatedAt.toDate().toISOString(),
+      links: profile.links.map(link => ({
+        id: link.id,
+        title: link.title,
+        url: link.url,
+        imageUrl: link.imageUrl || null,
+        order: link.order,
+        active: link.active,
+        clicks: link.clicks
+      }))
+    };
   }
 
-  private toUserResponse(user: User, token: string): UserResponse {
+  async getPublicProfile(username: string): Promise<PublicProfileResponse | null> {
+    const profile = await this.userRepository.getPublicProfile(username);
+    if (!profile) return null;
+
     return {
-      uid: user.uid,
-      username: user.username,
-      bio: user.bio,
-      picture: user.picture,
-      createdAt: user.createdAt.toDate().toISOString(),
-      updatedAt: user.updatedAt.toDate().toISOString(),
-      token,
+      username: profile.username,
+      displayName: profile.displayName,
+      bio: profile.bio || null,
+      avatarUrl: profile.avatarUrl || null,
+      theme: profile.theme,
+      links: profile.links.map(link => ({
+        id: link.id,
+        title: link.title,
+        url: link.url,
+        imageUrl: link.imageUrl || null,
+        order: link.order
+      }))
+    };
+  }
+
+  async updateUserProfile(uid: string, data: UpdateProfileInputParams): Promise<UserProfileResponse> {
+    const updatedProfile = await this.userRepository.updateUserProfile(uid, data);
+    const fullProfile = await this.getUserProfile(uid);
+    if (!fullProfile) {
+      throw new Error('Profile not found after update');
+    }
+    return fullProfile;
+  }
+
+  async deleteUserProfile(uid: string): Promise<void> {
+    await this.userRepository.deleteUserProfile(uid);
+  }
+
+  async getAllUsers(query: GetAllUsersQuery): Promise<PaginatedResponse<UserListItem>> {
+    const page = query.page || 1;
+    const limit = query.limit || 10;
+    
+    const { users, total } = await this.userRepository.getAllUsers(page, limit, query.search);
+    
+    const totalPages = Math.ceil(total / limit);
+
+    return {
+      users: users.map(user => ({
+        username: user.username,
+        displayName: user.displayName,
+        bio: user.bio || null,
+        avatarUrl: user.avatarUrl || null,
+        theme: user.theme
+      })),
+      pagination: {
+        total,
+        page,
+        limit,
+        totalPages
+      }
     };
   }
 } 
